@@ -1,0 +1,12 @@
+To: CTO, AeroGrid
+Subject: Telemetry Anomaly Detection & System Modernisation
+
+Findings:
+Following the analysis of the telemetry data, two turbines were identified as requiring maintenance:
+T-07, Vibration spikes over 15 mm/s.
+T-04, Average temp above threshold value.
+
+Architectural Modernisation:
+To solve the legacy server crashes and facilitate the large flow of telemetry data, you should transition the data processing pipeline to a more resilient distributed cluster solution, implementing Apache Kafka for data ingestion and stream processing to safely buffer data before directing normal data to slower cost-optimised storage, so only urgent, anomalous data is stored on the more expensive, high-speed storage.
+
+This will save costs and avoid future crashes.
