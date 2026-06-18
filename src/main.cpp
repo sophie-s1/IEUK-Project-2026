@@ -1,6 +1,6 @@
 // Engineering Sector Skills Project
 // Created by Sophie Smeeton for IEUK 2026
-// Revision 1
+// Revision 2
 
 #include <iostream>
 #include <fstream>
@@ -8,6 +8,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include <vector>
 
 int main() {
     // Input file
@@ -15,8 +16,11 @@ int main() {
     std::ifstream file(file_path);
 
     // Current line of csv
-    std::string line;
+    std::string line; // content
+    int line_count = 1; // line number
 
+    // List of lines numbers with missing or corrupted data
+    std::vector<int> bad_lines;
     // Set of turbine IDs with vibration spikes over 15.0 mm/s
     std::set<std::string> high_vibration_turbines;
     // Set of turbine IDs with average temperature over 85.0 °C
@@ -24,13 +28,20 @@ int main() {
     // Map of accumulated temperature data: {turbine_id: {sum_of_temperatures, count}}
     std::map<std::string, std::pair<double, int>> temp_stats;
 
+    // Check if the file was opened successfully
+    if (!file.is_open()) {
+            std::cerr << "Error: Could not open file " << file_path << std::endl;
+            return 1;
+        }
+
     // Read and discard the first line (header)
     std::getline(file, line);
 
     // Read the file line by line
     while (std::getline(file, line)) {
+        // Increment line count
+        line_count++;
         // Convert line to stream for parsing
-        // TODO: take data from stdin for real-time processing?
         std::stringstream line_stream(line);
 
         // Variables to hold parsed values
@@ -43,7 +54,11 @@ int main() {
         std::getline(line_stream, vib_str, ',');
         std::getline(line_stream, rpm_str, ',');
 
-        // TODO: identify and handle corrupted rows/missing data
+        // Log and skip rows with missing essemtial data
+        if (turbine_id.empty() || temp_str.empty() || vib_str.empty()) {
+            bad_lines.push_back(line_count);
+            continue;
+        }
 
         try {
             // Convert temperature and vibration to floats
@@ -59,8 +74,9 @@ int main() {
             temp_stats[turbine_id].first += temperature_c; // add to sum
             temp_stats[turbine_id].second += 1;            // increment count
 
+        // Log and skip lines with errors
         } catch (const std::invalid_argument& e) {
-            // TODO: log rows where conversion to double fails (e.g., corrupted data)
+            bad_lines.push_back(line_count);
             continue;
         }
     }
@@ -82,21 +98,34 @@ int main() {
 
     std::cout << "Turbines with vibration spikes over 15.0 mm/s: [";
     bool first = true;
-    for (const auto& id : high_vibration_turbines) {
+    for (const std::string id : high_vibration_turbines) {
         if (!first) std::cout << ", "; // Add a comma and space if not the first element
         std::cout << "'" << id << "'"; // Print turbine ID
         first = false; // Update first to false after the first element
     }
     std::cout << "]" << std::endl;
 
-    std::cout << "Turbines with an average temperature > 85.0 °C: [";
+    std::cout << "Turbines with an average temperature over 85.0 °C: [";
     first = true;
-    for (const auto& id : high_temp_turbines) {
+    for (const std::string& id : high_temp_turbines) {
         if (!first) std::cout << ", "; // Add a comma and space if not the first element
         std::cout << "'" << id << "'"; // Print turbine ID
         first = false; // Update first to false after the first element
     }
     std::cout << "]" << std::endl;
+
+    if (!bad_lines.empty()) {
+        std::cout << "Lines with missing or corrupted data: [";
+        first = true;
+        for (const int& line_num : bad_lines) {
+            if (!first) std::cout << ", "; // Add a comma and space if not the first element
+            std::cout << line_num; // Print line number
+            first = false; // Update first to false after the first element
+        }
+        std::cout << "]" << std::endl;
+    } else {
+        std::cout << "No lines with missing or corrupted data." << std::endl;
+    }
 
     return 0;
 }
